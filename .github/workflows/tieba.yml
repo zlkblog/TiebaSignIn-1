@@ -3,7 +3,8 @@ name: Daily Tieba Sign-In
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 22 * * *'  # 北京时间 6:30 (UTC+8)
+   - cron: '30 10 * * *'  # 北京时间 18:30 (UTC+8)
+   - cron: '30 22 * * *'  # 北京时间 06:30 (UTC+8)
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
