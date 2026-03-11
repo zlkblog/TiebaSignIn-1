@@ -73,7 +73,7 @@ public class Run {
     /**
      * 用户所关注的贴吧数量
      */
-    private static Integer followNum = 201;
+    private static Integer followNum = 1001;
 
     public static void main(String[] args) {
         Cookie cookie = Cookie.getInstance();
