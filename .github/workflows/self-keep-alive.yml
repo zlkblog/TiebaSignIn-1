@@ -1,6 +1,8 @@
 on:
   schedule:
-    - cron: '0 0 * * *' # daily at 00:00 UTC; workflow will only push when 30 days passed since last push
+      - cron: '0 0 * * *'  # 北京时间 08:00 UTC
+      - cron: '0 12 * * *'  # 北京时间 20:00 UTC
+      #  workflow will only push when 30 days passed since last push
   workflow_dispatch:
 
 permissions:
