@@ -5,12 +5,12 @@ on:
 
 permissions:
   contents: write
-
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # ← 放在这里（顶层）
 jobs:
   keep-alive:
     runs-on: ubuntu-latest
-     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+ 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
