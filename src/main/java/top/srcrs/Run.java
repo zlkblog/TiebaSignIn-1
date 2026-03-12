@@ -130,10 +130,13 @@ public class Run {
      * 发送运行结果到微信，通过 Server酱（sct.ftqq.com）
      */
     public void send(String sckey) {
+        /**
+     * 发送运行结果到微信，通过 Server酱
+     */
+    public void send(String sckey) {
         try {
-            String text = URLEncoder.encode("百度贴吧自动签到结果", "UTF-8");
-            String desp = "";
-            desp += "✨ 签到结果\n";
+            String text = "百度贴吧自动签到结果";
+            String desp = "✨ 签到结果\n";
             desp += "📊 总数: " + followNum + "\n";
             desp += "✅ 成功: " + success.size() + "\n";
             desp += "❌ 失败: " + failed.size() + "\n";
@@ -144,10 +147,12 @@ public class Run {
                     desp += "- " + tieba + "\n";
                 }
             }
-            desp = URLEncoder.encode(desp, "UTF-8");
             
-            String urlStr = "https://sctapi.ftqq.com/" + sckey + ".send?text=" + ...;
-            URL serverUrl = new URL(url);
+            String urlStr = "https://sctapi.ftqq.com/" + sckey + ".send" +
+                "?text=" + URLEncoder.encode(text, "UTF-8") +
+                "&desp=" + URLEncoder.encode(desp, "UTF-8");
+            
+            URL serverUrl = new URL(urlStr);
             HttpURLConnection connection = (HttpURLConnection) serverUrl.openConnection();
             connection.setRequestMethod("GET");
 
@@ -167,4 +172,3 @@ public class Run {
             LOGGER.error("Server酱发送失败 -- " + e);
         }
     }
-}
