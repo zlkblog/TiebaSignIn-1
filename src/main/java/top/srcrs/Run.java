@@ -15,12 +15,6 @@ import java.net.URLEncoder;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-/**
- * 程序运行开始的地方
- *
- * @author srcrs
- * @Time 2020-10-31
- */
 public class Run {
     private static final Logger LOGGER = LoggerFactory.getLogger(Run.class);
 
@@ -126,13 +120,6 @@ public class Run {
         }
     }
 
-    /**
-     * 发送运行结果到微信，通过 Server酱（sct.ftqq.com）
-     */
-    public void send(String sckey) {
-        /**
-     * 发送运行结果到微信，通过 Server酱
-     */
     public void send(String sckey) {
         try {
             String text = "百度贴吧自动签到结果";
@@ -172,3 +159,4 @@ public class Run {
             LOGGER.error("Server酱发送失败 -- " + e);
         }
     }
+}
