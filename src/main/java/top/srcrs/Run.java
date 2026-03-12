@@ -146,7 +146,7 @@ public class Run {
             }
             desp = URLEncoder.encode(desp, "UTF-8");
             
-            String url = "https://sct.ftqq.com/" + sckey + ".send?text=" + text + "&desp=" + desp;
+            String urlStr = "https://sctapi.ftqq.com/" + sckey + ".send?text=" + ...;
             URL serverUrl = new URL(url);
             HttpURLConnection connection = (HttpURLConnection) serverUrl.openConnection();
             connection.setRequestMethod("GET");
