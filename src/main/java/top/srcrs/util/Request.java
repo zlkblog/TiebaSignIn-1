@@ -56,7 +56,11 @@ public class Request {
         httpGet.addHeader("connection", "keep-alive");
         httpGet.addHeader("Content-Type", "application/x-www-form-urlencoded");
         httpGet.addHeader("charset", "UTF-8");
-        httpGet.addHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36");
+        httpGet.addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        httpGet.addHeader("Accept", "application/json, text/javascript, */*; q=0.01");
+        httpGet.addHeader("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
+        httpGet.addHeader("Referer", "https://tieba.baidu.com/f/like/mylike");
+        httpGet.addHeader("X-Requested-With", "XMLHttpRequest");
         httpGet.addHeader("Cookie", cookie.getCookie());
         HttpResponse resp = null;
         String respContent = null;
@@ -69,6 +73,11 @@ public class Request {
                 entity = resp.getEntity();
             }
             respContent = EntityUtils.toString(entity, "UTF-8");
+            // 检查返回的是否为HTML（可能是登录页面或错误页面）
+            if (respContent != null && respContent.trim().startsWith("<!DOCTYPE")) {
+                LOGGER.warn("返回了HTML而不是JSON，可能是登录失效或API变化");
+                return null;
+            }
         } catch (Exception e) {
             LOGGER.info("get请求错误 -- " + e);
         } finally {
@@ -92,9 +101,12 @@ public class Request {
         HttpPost httpPost = new HttpPost(url);
         httpPost.addHeader("connection", "keep-alive");
         httpPost.addHeader("Host", "tieba.baidu.com");
-        httpPost.addHeader("Content-Type", "application/x-www-form-urlencoded");
+        httpPost.addHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
         httpPost.addHeader("charset", "UTF-8");
-        httpPost.addHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36");
+        httpPost.addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        httpPost.addHeader("Accept", "*/*");
+        httpPost.addHeader("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
+        httpPost.addHeader("Referer", "https://tieba.baidu.com/");
         httpPost.addHeader("Cookie", cookie.getCookie());
         httpPost.setEntity(entityBody);
         HttpResponse resp = null;
@@ -152,4 +164,3 @@ public class Request {
         }
     }
 }
-
