@@ -80,11 +80,13 @@ public class Run
     }
 
     /**
-     * 获取用户所关注的贴吧列表 - PC端JSON接口，支持分页获取所有贴吧
+     * 获取用户所关注的贴吧列表 - 优先PC端API支持分页，失败则用手机端API
      * @author srcrs
      * @Time 2020-10-31
      */
     public void getFollow(){
+        // 先尝试PC端接口（支持分页，可以获取超过200个贴吧）
+        boolean pcApiSuccess = false;
         try{
             int page = 1;
             int perPage = 50;
@@ -93,7 +95,13 @@ public class Run
             while(hasMore){
                 String pageUrl = LIKE_URL + "?pn=" + page + "&rn=" + perPage;
                 JSONObject jsonObject = Request.get(pageUrl);
-                LOGGER.info("获取第 {} 页贴吧列表", page);
+                LOGGER.info("PC端接口获取第 {} 页贴吧列表", page);
+                
+                // 检查返回是否为JSON（不是HTML错误页面）
+                if(jsonObject == null || !jsonObject.containsKey("forum_list")){
+                    LOGGER.warn("PC端接口返回异常，尝试手机端接口");
+                    break;
+                }
                 
                 JSONArray jsonArray = jsonObject.getJSONArray("forum_list");
                 if(jsonArray == null || jsonArray.isEmpty()){
@@ -103,10 +111,8 @@ public class Run
                 
                 for(Object array : jsonArray){
                     if("0".equals(((JSONObject) array).getString("is_sign"))){
-                        // 将未签到的贴吧加入到 follow 中，待签到
                         follow.add(((JSONObject) array).getString("forum_name").replace("+","%2B"));
                     } else{
-                        // 将已经成功签到的贴吧，加入到 success
                         success.add(((JSONObject) array).getString("forum_name"));
                     }
                 }
@@ -119,15 +125,21 @@ public class Run
                 }
             }
             
-            followNum = follow.size() + success.size();
-            LOGGER.info("共获取 {} 个贴吧", followNum);
+            if(follow.size() > 0 || success.size() > 0){
+                pcApiSuccess = true;
+                followNum = follow.size() + success.size();
+                LOGGER.info("PC端接口共获取 {} 个贴吧", followNum);
+            }
             
         } catch (Exception e){
-            LOGGER.error("获取贴吧列表部分出现错误 -- " + e);
-            // 备用方案：尝试手机端接口
+            LOGGER.warn("PC端接口获取失败 -- " + e);
+        }
+        
+        // 如果PC端失败，使用手机端接口
+        if(!pcApiSuccess){
             try{
+                LOGGER.info("使用手机端接口获取");
                 JSONObject jsonObject = Request.get("https://tieba.baidu.com/mo/q/newmoindex");
-                LOGGER.info("使用备用方式获取");
                 JSONArray jsonArray = jsonObject.getJSONObject("data").getJSONArray("like_forum");
                 followNum = jsonArray.size();
                 for (Object array : jsonArray) {
@@ -137,8 +149,9 @@ public class Run
                         success.add(((JSONObject) array).getString("forum_name"));
                     }
                 }
+                LOGGER.info("手机端接口共获取 {} 个贴吧（注意：手机端API最多返回200个）", followNum);
             } catch (Exception e2){
-                LOGGER.error("备用方式也失败 -- " + e2);
+                LOGGER.error("手机端接口也失败 -- " + e2);
             }
         }
     }
