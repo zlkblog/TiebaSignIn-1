@@ -35,9 +35,9 @@ public class Run {
     private static final Logger LOGGER = LoggerFactory.getLogger(Run.class);
 
     /**
-     * 获取用户所有关注贴吧 - PC端接口，支持分页
+     * 获取用户所有关注贴吧 - 手机端接口，支持分页
      */
-    String LIKE_URL = "https://tieba.baidu.com/favForum";
+    String LIKE_URL = "https://tieba.baidu.com/mo/q/newmoindex";
     /**
      * 获取用户的tbs
      */
@@ -77,7 +77,6 @@ public class Run {
 
     public static void main(String[] args) {
         Cookie cookie = Cookie.getInstance();
-        // 存入Cookie，以备使用
         if (args.length == 0) {
             LOGGER.warn("请在Secrets中填写BDUSS");
         }
@@ -93,12 +92,6 @@ public class Run {
         }
     }
 
-    /**
-     * 进行登录，获得 tbs ，签到的时候需要用到这个参数
-     *
-     * @author srcrs
-     * @Time 2020-10-31
-     */
     public void getTbs() {
         try {
             JSONObject jsonObject = Request.get(TBS_URL);
@@ -115,9 +108,6 @@ public class Run {
 
     /**
      * 获取用户所关注的贴吧列表 - 支持分页获取，突破200个限制
-     *
-     * @author srcrs
-     * @Time 2020-10-31
      */
     public void getFollow() {
         try {
@@ -126,45 +116,23 @@ public class Run {
             boolean hasMore = true;
             
             while (hasMore) {
-                String pageUrl = LIKE_URL + "?pn=" + page + "&rn=" + perPage;
+                String pageUrl = LIKE_URL + "?pn=" + page;
                 JSONObject jsonObject = Request.get(pageUrl);
                 
                 LOGGER.info("获取第 {} 页贴吧列表", page);
                 
-                JSONArray jsonArray = null;
-                try {
-                    jsonArray = jsonObject.getJSONObject("data").getJSONArray("thread_list");
-                } catch (Exception e) {
-                    try {
-                        jsonArray = jsonObject.getJSONObject("data").getJSONArray("forum_list");
-                    } catch (Exception e2) {
-                        jsonArray = jsonObject.getJSONObject("data").getJSONArray("like_forum");
-                    }
-                }
+                JSONArray jsonArray = jsonObject.getJSONObject("data").getJSONArray("like_forum");
                 
                 if (jsonArray == null || jsonArray.isEmpty()) {
                     hasMore = false;
                     break;
                 }
                 
-                followNum += jsonArray.size();
-                
                 for (Object array : jsonArray) {
-                    String tiebaName = null;
-                    try {
-                        tiebaName = ((JSONObject) array).getString("forum_name");
-                    } catch (Exception e) {
-                        tiebaName = ((JSONObject) array).getString("name");
-                    }
+                    String tiebaName = ((JSONObject) array).getString("forum_name");
+                    if (tiebaName == null || tiebaName.isEmpty()) continue;
                     
-                    if (tiebaName == null) continue;
-                    
-                    String isSign = "0";
-                    try {
-                        isSign = ((JSONObject) array).getString("is_sign");
-                    } catch (Exception e) {}
-                    
-                    if ("0".equals(isSign)) {
+                    if ("0".equals(((JSONObject) array).getString("is_sign"))) {
                         follow.add(tiebaName.replace("+", "%2B"));
                         if (Request.isTiebaNotExist(tiebaName)) {
                             follow.remove(tiebaName);
@@ -184,7 +152,8 @@ public class Run {
                 }
             }
             
-            LOGGER.info("获取贴吧列表成功，共 {} 个贴吧", follow.size() + success.size());
+            followNum = follow.size() + success.size();
+            LOGGER.info("获取贴吧列表成功，共 {} 个贴吧", followNum);
             
         } catch (Exception e) {
             LOGGER.error("获取贴吧列表部分出现错误 -- " + e);
@@ -207,12 +176,6 @@ public class Run {
         }
     }
 
-    /**
-     * 开始进行签到，每一轮性将所有未签到的贴吧进行签到，一共进行5轮，如果还未签到完就立即结束
-     *
-     * @author srcrs
-     * @Time 2020-10-31
-     */
     public void runSign() {
         Integer flag = 5;
         try {
@@ -250,13 +213,6 @@ public class Run {
         }
     }
 
-    /**
-     * 发送运行结果到微信，通过 server 酱
-     *
-     * @param sckey
-     * @author srcrs
-     * @Time 2020-10-31
-     */
     public void send(String sckey) {
         try {
             String text = "总: " + followNum + " - ";
