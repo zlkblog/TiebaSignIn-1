@@ -1,4 +1,4 @@
-```java
+
 package top.srcrs;
 
 import com.alibaba.fastjson.JSONArray;
@@ -292,6 +292,3 @@ public class Run
         }
     }
 }
-```
-
-直接复制全部替换 `src/main/java/top/srcrs/Run.java` 就行！
