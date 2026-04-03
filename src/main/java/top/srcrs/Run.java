@@ -1,3 +1,4 @@
+```java
 package top.srcrs;
 
 import com.alibaba.fastjson.JSONArray;
@@ -37,7 +38,9 @@ public class Run
     /** 存储用户所关注的贴吧 */
     private List<String> follow = new ArrayList<>();
     /** 签到成功的贴吧列表 */
-    private static List<String>  success = new ArrayList<>();
+    private static List<String> success = new ArrayList<>();
+    /** 签到失败的贴吧列表 */
+    private static List<String> failed = new ArrayList<>();
     /** 用户的tbs */
     private String tbs = "";
     /** 用户所关注的贴吧数量 */
@@ -54,9 +57,28 @@ public class Run
         run.getTbs();
         run.getFollow();
         run.runSign();
-        LOGGER.info("共 {} 个贴吧 - 成功: {} - 失败: {}",followNum,success.size(),followNum-success.size());
+        
+        // 输出签到结果汇总
+        LOGGER.info("========================================");
+        LOGGER.info("贴吧签到完成！共 {} 个贴吧", followNum);
+        LOGGER.info("成功: {} 个", success.size());
+        LOGGER.info("失败: {} 个", failed.size());
+        
+        // 输出失败的贴吧列表
+        if(!failed.isEmpty()){
+            LOGGER.warn("========== 失败贴吧列表 ==========");
+            for(int i = 0; i < failed.size(); i++){
+                LOGGER.warn("{}. {}", i + 1, failed.get(i));
+            }
+            LOGGER.warn("==================================");
+        }
+        
+        // 输出成功的贴吧列表（简要）
+        LOGGER.info("成功贴吧数: {}", success.size());
+        LOGGER.info("========================================");
+        
         if(args.length == 2){
-            run.send(args[1]);
+            run.send(args[1], failed);
         }
     }
 
@@ -135,21 +157,44 @@ public class Run
             LOGGER.warn("PC端接口获取失败 -- " + e);
         }
         
-        // 如果PC端失败，使用手机端接口
+        // 如果PC端失败，使用手机端接口（支持分页）
         if(!pcApiSuccess){
             try{
-                LOGGER.info("使用手机端接口获取");
-                JSONObject jsonObject = Request.get("https://tieba.baidu.com/mo/q/newmoindex");
-                JSONArray jsonArray = jsonObject.getJSONObject("data").getJSONArray("like_forum");
-                followNum = jsonArray.size();
-                for (Object array : jsonArray) {
-                    if("0".equals(((JSONObject) array).getString("is_sign"))){
-                        follow.add(((JSONObject) array).getString("forum_name").replace("+","%2B"));
-                    } else{
-                        success.add(((JSONObject) array).getString("forum_name"));
+                LOGGER.info("使用手机端接口获取（尝试分页）");
+                int page = 1;
+                int perPage = 200;
+                boolean hasMore = true;
+                
+                while(hasMore){
+                    String pageUrl = "https://tieba.baidu.com/mo/q/newmoindex?pn=" + page;
+                    JSONObject jsonObject = Request.get(pageUrl);
+                    JSONArray jsonArray = jsonObject.getJSONObject("data").getJSONArray("like_forum");
+                    
+                    if(jsonArray == null || jsonArray.isEmpty()){
+                        hasMore = false;
+                        break;
+                    }
+                    
+                    LOGGER.info("手机端接口获取第 {} 页，获取到 {} 个贴吧", page, jsonArray.size());
+                    
+                    for (Object array : jsonArray) {
+                        if("0".equals(((JSONObject) array).getString("is_sign"))){
+                            follow.add(((JSONObject) array).getString("forum_name").replace("+","%2B"));
+                        } else{
+                            success.add(((JSONObject) array).getString("forum_name"));
+                        }
+                    }
+                    
+                    if(jsonArray.size() < perPage){
+                        hasMore = false;
+                    } else {
+                        page++;
+                        Thread.sleep(500);
                     }
                 }
-                LOGGER.info("手机端接口共获取 {} 个贴吧（注意：手机端API最多返回200个）", followNum);
+                
+                followNum = follow.size() + success.size();
+                LOGGER.info("手机端接口共获取 {} 个贴吧", followNum);
             } catch (Exception e2){
                 LOGGER.error("手机端接口也失败 -- " + e2);
             }
@@ -183,7 +228,9 @@ public class Run
                         success.add(rotation);
                         LOGGER.info(rotation + ": " + "签到成功");
                     } else {
-                        LOGGER.warn(rotation +": " + "签到失败");
+                        // 签到失败，记录到失败列表
+                        LOGGER.warn(rotation + ": 签到失败 - " + post.getString("error_msg") + " (错误码:" + post.getString("error_code") + ")");
+                        failed.add(rotation);
                     }
                 }
                 if(success.size() != followNum){
@@ -201,16 +248,27 @@ public class Run
 
     /**
      * 发送签到结果到server酱推送
-     * @param sckey
+     * @param sckey server酱的sckey
+     * @param failed 签到失败的贴吧列表
      * @author srcrs
      * @Time 2020-10-31
      */
-    public void send(String sckey){
+    public void send(String sckey, List<String> failed){
         /** 发送签到结果到server酱 */
         String text = "贴吧签到 " + followNum + " - ";
-        text += "成功 " + success.size() + " 失败:" + (followNum - success.size());
+        text += "成功 " + success.size() + " 失败:" + failed.size();
         String desp = "共 " + followNum + " 个贴吧\n";
-        desp += "成功: " + success.size() + " 失败: " + (followNum - success.size()) + "\n";
+        desp += "成功: " + success.size() + " 个\n";
+        desp += "失败: " + failed.size() + " 个\n";
+        
+        // 添加失败贴吧列表
+        if(!failed.isEmpty()){
+            desp += "\n--- 失败贴吧列表 ---\n";
+            for(int i = 0; i < failed.size(); i++){
+                desp += (i + 1) + ". " + failed.get(i) + "\n";
+            }
+        }
+        
         String body = "text="+text+"&desp="+"TiebaSignIn签到结果\n\n"+desp;
         StringEntity entityBody = new StringEntity(body,"UTF-8");
         HttpClient client = HttpClients.createDefault();
@@ -234,3 +292,6 @@ public class Run
         }
     }
 }
+```
+
+直接复制全部替换 `src/main/java/top/srcrs/Run.java` 就行！
